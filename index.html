@@ -1,0 +1,62 @@
+
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Υπολογιστής Κοστολόγησης</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>💼 Υπολογιστής Κοστολόγησης Προϊόντος</h1>
+
+    <div class="section">
+      <label>🧾 Όνομα Προϊόντος:</label>
+      <input type="text" id="productName" placeholder="π.χ. Σουπιά" />
+      <label>💶 Τιμή Αγοράς (€ / κιλό):</label>
+      <input type="number" id="purchasePrice" />
+    </div>
+
+    <div class="section">
+      <label>❌ Φύρα (%):</label>
+      <input type="number" id="waste" />
+      <label>👷 Εργατοώρες:</label>
+      <input type="number" id="laborHours" />
+      <label>💵 Κόστος ανά Εργατοώρα (€):</label>
+      <input type="number" id="laborCost" />
+    </div>
+
+    <div class="section">
+      <label>📦 Κόστος Κούτας (€):</label>
+      <input type="number" id="boxCost" />
+      <label>🛍️ Κόστος Σακούλας (€):</label>
+      <input type="number" id="bagCost" />
+    </div>
+
+    <div class="section">
+      <label>🚛 Απόσταση Μεταφοράς (km):</label>
+      <input type="number" id="distance" />
+      <label>⛽ Κόστος Βενζίνης (€/km):</label>
+      <input type="number" id="fuelCost" />
+      <label>🛣️ Κόστος Διοδίων (€):</label>
+      <input type="number" id="tolls" />
+    </div>
+
+    <div class="section">
+      <label>❄️ Ποσοστό Πάγου (%):</label>
+      <input type="number" id="icePercent" />
+      <label>📈 Επιθυμητό Περιθώριο Κέρδους (%):</label>
+      <input type="number" id="profitMargin" />
+    </div>
+
+    <button onclick="calculate()">Υπολογισμός</button>
+
+    <div id="result" class="section"></div>
+    <canvas id="chart" height="100"></canvas>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
