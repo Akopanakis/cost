@@ -7,11 +7,30 @@ let currentCalculation = null;
 document.addEventListener('DOMContentLoaded', function() {
     loadDefaultValues();
     updateAllSliderValues();
+    setupEventListeners();
 });
+
+// Event Listeners
+function setupEventListeners() {
+    // Ενημέρωση εργασίας σε πραγματικό χρόνο
+    ['workerCount', 'laborHours', 'laborCost'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', updateLaborSummary);
+        }
+    });
+
+    // Ενημέρωση μεταφοράς σε πραγματικό χρόνο
+    ['distance', 'fuelCost', 'tolls', 'parkingCost'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', updateTransportSummary);
+        }
+    });
+}
 
 // Διαχείριση tabs
 function showTab(tabName) {
-    // Απόκρυψη όλων των tabs
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
@@ -19,7 +38,6 @@ function showTab(tabName) {
         button.classList.remove('active');
     });
     
-    // Εμφάνιση επιλεγμένου tab
     document.getElementById(tabName).classList.add('active');
     event.target.classList.add('active');
 }
@@ -40,6 +58,36 @@ function updateAllSliderValues() {
     });
 }
 
+// Ενημέρωση περίληψης εργασίας
+function updateLaborSummary() {
+    const workerCount = parseFloat(document.getElementById('workerCount').value) || 0;
+    const laborHours = parseFloat(document.getElementById('laborHours').value) || 0;
+    const laborCost = parseFloat(document.getElementById('laborCost').value) || 0;
+    
+    const totalHours = workerCount * laborHours;
+    const totalCost = totalHours * laborCost;
+    
+    document.getElementById('totalLaborHours').textContent = totalHours.toFixed(1);
+    document.getElementById('totalLaborCost').textContent = totalCost.toFixed(2) + '€';
+}
+
+// Ενημέρωση περίληψης μεταφοράς
+function updateTransportSummary() {
+    const distance = parseFloat(document.getElementById('distance').value) || 0;
+    const fuelCost = parseFloat(document.getElementById('fuelCost').value) || 0;
+    const tolls = parseFloat(document.getElementById('tolls').value) || 0;
+    const parkingCost = parseFloat(document.getElementById('parkingCost').value) || 0;
+    
+    const totalCost = (distance * fuelCost) + tolls + parkingCost;
+    
+    document.getElementById('totalTransportCost').textContent = totalCost.toFixed(2) + '€';
+}
+
+// Εμφάνιση/απόκρυψη επιπλέον κοστών
+function toggleAdditionalCosts() {
+    document.getElementById('additionalCostsModal').style.display = 'block';
+}
+
 // Σενάρια τιμολόγησης
 function setScenario(scenario) {
     const scenarios = {
@@ -54,11 +102,9 @@ function setScenario(scenario) {
     
     // Ενημέρωση UI
     document.querySelectorAll('.btn-scenario').forEach(btn => {
-        btn.style.background = 'white';
-        btn.style.color = '#666';
+        btn.classList.remove('active');
     });
-    event.target.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
-    event.target.style.color = 'white';
+    event.target.classList.add('active');
 }
 
 // Κύριος υπολογισμός
@@ -67,14 +113,11 @@ function calculate() {
     const results = performCalculations(data);
     
     currentCalculation = { data, results };
-    displayResults(results);
+    displayResults(results, data);
     renderCharts(results, data);
     analyzeCompetitors(results);
     
-    // Εμφάνιση αποτελεσμάτων
     document.getElementById('result').classList.add('show');
-    
-    // Smooth scroll στα αποτελέσματα
     document.getElementById('result').scrollIntoView({ 
         behavior: 'smooth',
         block: 'start'
@@ -87,6 +130,7 @@ function collectFormData() {
         purchasePrice: parseFloat(document.getElementById('purchasePrice').value) || 0,
         quantity: parseFloat(document.getElementById('quantity').value) || 1,
         waste: parseFloat(document.getElementById('waste').value) || 0,
+        workerCount: parseFloat(document.getElementById('workerCount').value) || 1,
         laborHours: parseFloat(document.getElementById('laborHours').value) || 0,
         laborCost: parseFloat(document.getElementById('laborCost').value) || 0,
         boxCost: parseFloat(document.getElementById('boxCost').value) || 0,
@@ -99,6 +143,9 @@ function collectFormData() {
         electricityCost: parseFloat(document.getElementById('electricityCost').value) || 0,
         equipmentCost: parseFloat(document.getElementById('equipmentCost').value) || 0,
         insuranceCost: parseFloat(document.getElementById('insuranceCost').value) || 0,
+        rentCost: parseFloat(document.getElementById('rentCost').value) || 0,
+        communicationCost: parseFloat(document.getElementById('communicationCost').value) || 0,
+        otherCosts: parseFloat(document.getElementById('otherCosts').value) || 0,
         profitMargin: parseFloat(document.getElementById('profitMargin').value) || 0
     };
 }
@@ -106,13 +153,21 @@ function collectFormData() {
 function performCalculations(data) {
     // Βασικοί υπολογισμοί
     const cleanCost = data.purchasePrice / (1 - data.waste / 100);
-    const laborTotal = data.laborHours * data.laborCost;
+    const totalLaborHours = data.workerCount * data.laborHours;
+    const laborTotal = totalLaborHours * data.laborCost;
     const packagingCost = data.boxCost + data.bagCost;
-    const iceCost = (data.icePercent / 100) * data.purchasePrice;
     const transportCost = (data.distance * data.fuelCost) + data.tolls + data.parkingCost;
-    const additionalCosts = data.electricityCost + data.equipmentCost + data.insuranceCost;
+    const additionalCosts = data.electricityCost + data.equipmentCost + data.insuranceCost + 
+                           data.rentCost + data.communicationCost + data.otherCosts;
     
-    const totalCostPerKg = cleanCost + laborTotal + packagingCost + iceCost + transportCost + additionalCosts;
+    // Υπολογισμός κόστους ανά κιλό καθαρού προϊόντος
+    const totalCostPerKg = cleanCost + (laborTotal / data.quantity) + (packagingCost / data.quantity) + 
+                          (transportCost / data.quantity) + (additionalCosts / data.quantity);
+    
+    // Υπολογισμός τελικού βάρους με πάγο
+    const finalWeight = data.quantity * (1 + data.icePercent / 100);
+    const costPerKgWithIce = totalCostPerKg / (1 + data.icePercent / 100);
+    
     const totalCostForQuantity = totalCostPerKg * data.quantity;
     
     const finalPricePerKg = totalCostPerKg * (1 + data.profitMargin / 100);
@@ -123,32 +178,39 @@ function performCalculations(data) {
     
     const profitMarginActual = (profitPerKg / totalCostPerKg) * 100;
     
+    // Υπολογισμός εσόδων
+    const revenue = finalPriceForQuantity;
+    const netProfit = revenue - totalCostForQuantity;
+    
     return {
         cleanCost,
         laborTotal,
+        totalLaborHours,
         packagingCost,
-        iceCost,
         transportCost,
         additionalCosts,
         totalCostPerKg,
+        costPerKgWithIce,
+        finalWeight,
         totalCostForQuantity,
         finalPricePerKg,
         finalPriceForQuantity,
         profitPerKg,
         profitForQuantity,
         profitMarginActual,
+        revenue,
+        netProfit,
         breakdown: {
-            'Καθαρό Κόστος Προϊόντος': cleanCost,
+            'Καθαρό Κόστος Προϊόντος': cleanCost * data.quantity,
             'Εργασία': laborTotal,
             'Συσκευασία': packagingCost,
-            'Πάγος': iceCost,
             'Μεταφορά': transportCost,
             'Επιπλέον Κόστη': additionalCosts
         }
     };
 }
 
-function displayResults(results) {
+function displayResults(results, data) {
     const profitClass = results.profitPerKg >= 0 ? 'profit' : 'loss';
     const profitIcon = results.profitPerKg >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
     
@@ -177,6 +239,18 @@ function displayResults(results) {
                 <div class="result-label">Περιθώριο Κέρδους</div>
                 <div class="result-value">${results.profitMarginActual.toFixed(1)}%</div>
             </div>
+            
+            ${data.icePercent > 0 ? `
+            <div class="result-card">
+                <div class="result-label">Τελικό Βάρος (με πάγο)</div>
+                <div class="result-value">${results.finalWeight.toFixed(2)} κιλά</div>
+            </div>
+            
+            <div class="result-card">
+                <div class="result-label">Κόστος/κιλό (με πάγο)</div>
+                <div class="result-value">${results.costPerKgWithIce.toFixed(2)}€</div>
+            </div>
+            ` : ''}
         </div>
         
         <div class="result-summary">
@@ -188,17 +262,21 @@ function displayResults(results) {
                         <span class="breakdown-value">${value.toFixed(2)}€</span>
                     </div>
                 `).join('')}
+                <div class="breakdown-item">
+                    <span class="breakdown-label">Συνολικές Εργατοώρες:</span>
+                    <span class="breakdown-value">${results.totalLaborHours.toFixed(1)} ώρες</span>
+                </div>
             </div>
         </div>
         
         <div class="recommendations">
             <h4><i class="fas fa-lightbulb"></i> Συστάσεις</h4>
-            ${generateRecommendations(results)}
+            ${generateRecommendations(results, data)}
         </div>
     `;
 }
 
-function generateRecommendations(results) {
+function generateRecommendations(results, data) {
     const recommendations = [];
     
     if (results.profitMarginActual < 15) {
@@ -209,12 +287,20 @@ function generateRecommendations(results) {
         recommendations.push('<div class="recommendation success"><i class="fas fa-check-circle"></i> Εξαιρετικό περιθώριο κέρδους! Μπορείτε να είστε ανταγωνιστικοί στην τιμή.</div>');
     }
     
-    if (results.breakdown['Μεταφορά'] > results.totalCostPerKg * 0.2) {
+    if (results.breakdown['Μεταφορά'] > results.totalCostForQuantity * 0.2) {
         recommendations.push('<div class="recommendation info"><i class="fas fa-truck"></i> Το κόστος μεταφοράς είναι υψηλό. Εξετάστε βελτιστοποίηση διαδρομών.</div>');
     }
     
-    if (results.breakdown['Εργασία'] > results.totalCostPerKg * 0.3) {
+    if (results.breakdown['Εργασία'] > results.totalCostForQuantity * 0.3) {
         recommendations.push('<div class="recommendation info"><i class="fas fa-users"></i> Το κόστος εργασίας είναι σημαντικό. Εξετάστε αυτοματοποίηση διαδικασιών.</div>');
+    }
+    
+    if (data.icePercent > 20) {
+        recommendations.push('<div class="recommendation warning"><i class="fas fa-snowflake"></i> Το ποσοστό πάγου είναι υψηλό. Βεβαιωθείτε ότι συμμορφώνεστε με τους κανονισμούς.</div>');
+    }
+    
+    if (results.totalLaborHours > 8 * data.workerCount) {
+        recommendations.push('<div class="recommendation warning"><i class="fas fa-clock"></i> Οι εργατοώρες υπερβαίνουν το κανονικό ωράριο. Υπολογίστε υπερωρίες.</div>');
     }
     
     return recommendations.length > 0 ? recommendations.join('') : '<div class="recommendation success"><i class="fas fa-thumbs-up"></i> Η κοστολόγηση φαίνεται ισορροπημένη!</div>';
@@ -223,6 +309,7 @@ function generateRecommendations(results) {
 function renderCharts(results, data) {
     renderProfitChart(results);
     renderCostBreakdownChart(results);
+    renderRevenueChart(results, data);
 }
 
 function renderProfitChart(results) {
@@ -251,11 +338,11 @@ function renderProfitChart(results) {
             datasets: [{
                 label: 'Κέρδος ανά κιλό (€)',
                 data: profits,
-                borderColor: 'rgb(102, 126, 234)',
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
                 fill: true,
                 tension: 0.4,
-                pointBackgroundColor: 'rgb(102, 126, 234)',
+                pointBackgroundColor: '#2563eb',
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2,
                 pointRadius: 5
@@ -304,8 +391,8 @@ function renderCostBreakdownChart(results) {
     const labels = Object.keys(results.breakdown);
     const data = Object.values(results.breakdown);
     const colors = [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+        '#ef4444', '#3b82f6', '#f59e0b', '#10b981', 
+        '#8b5cf6', '#f97316', '#ec4899', '#6b7280'
     ];
     
     chartInstances.breakdown = new Chart(ctx, {
@@ -338,9 +425,77 @@ function renderCostBreakdownChart(results) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const percentage = ((context.parsed / results.totalCostPerKg) * 100).toFixed(1);
+                            const percentage = ((context.parsed / results.totalCostForQuantity) * 100).toFixed(1);
                             return `${context.label}: ${context.parsed.toFixed(2)}€ (${percentage}%)`;
                         }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderRevenueChart(results, data) {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    
+    if (chartInstances.revenue) {
+        chartInstances.revenue.destroy();
+    }
+    
+    const chartData = {
+        labels: ['Κόστος', 'Κέρδος'],
+        datasets: [{
+            label: 'Ανάλυση Εσόδων (€)',
+            data: [results.totalCostForQuantity, results.profitForQuantity],
+            backgroundColor: [
+                '#ef4444',
+                '#10b981'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    };
+    
+    chartInstances.revenue = new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Γράφημα Κόστους - Εσόδων',
+                    font: { size: 16, weight: 'bold' }
+                },
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = results.revenue;
+                            const percentage = ((context.parsed.y / total) * 100).toFixed(1);
+                            return `${context.label}: ${context.parsed.y.toFixed(2)}€ (${percentage}%)`;
+                        },
+                        footer: function(tooltipItems) {
+                            return `Συνολικά Έσοδα: ${results.revenue.toFixed(2)}€`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Ποσό (€)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Κατηγορία'
                     }
                 }
             }
@@ -363,7 +518,7 @@ function analyzeCompetitors(results) {
         const diff1 = results.finalPricePerKg - competitor1;
         const percentage1 = ((diff1 / competitor1) * 100).toFixed(1);
         const status1 = diff1 > 0 ? 'ακριβότερη' : 'φθηνότερη';
-        const color1 = diff1 > 0 ? '#dc3545' : '#28a745';
+        const color1 = diff1 > 0 ? '#dc2626' : '#059669';
         
         analysis += `
             <div class="competitor-card">
@@ -380,7 +535,7 @@ function analyzeCompetitors(results) {
         const diff2 = results.finalPricePerKg - competitor2;
         const percentage2 = ((diff2 / competitor2) * 100).toFixed(1);
         const status2 = diff2 > 0 ? 'ακριβότερη' : 'φθηνότερη';
-        const color2 = diff2 > 0 ? '#dc3545' : '#28a745';
+        const color2 = diff2 > 0 ? '#dc2626' : '#059669';
         
         analysis += `
             <div class="competitor-card">
@@ -410,7 +565,7 @@ function loadTemplate() {
 function saveTemplateData() {
     const templateName = document.getElementById('templateName').value.trim();
     if (!templateName) {
-        alert('Παρακαλώ εισάγετε όνομα προτύπου');
+        showNotification('Παρακαλώ εισάγετε όνομα προτύπου', 'warning');
         return;
     }
     
@@ -423,7 +578,6 @@ function saveTemplateData() {
     localStorage.setItem('costTemplates', JSON.stringify(savedTemplates));
     closeModal('saveModal');
     
-    // Εμφάνιση μηνύματος επιτυχίας
     showNotification('Το πρότυπο αποθηκεύτηκε επιτυχώς!', 'success');
 }
 
@@ -431,7 +585,7 @@ function displayTemplateList() {
     const templateList = document.getElementById('templateList');
     
     if (Object.keys(savedTemplates).length === 0) {
-        templateList.innerHTML = '<p style="text-align: center; color: #666;">Δεν υπάρχουν αποθηκευμένα πρότυπα</p>';
+        templateList.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Δεν υπάρχουν αποθηκευμένα πρότυπα</p>';
         return;
     }
     
@@ -440,7 +594,7 @@ function displayTemplateList() {
             <div>
                 <strong>${name}</strong>
                 <br>
-                <small>Αποθηκεύτηκε: ${new Date(data.savedAt).toLocaleDateString('el-GR')}</small>
+                <small style="color: var(--text-muted);">Αποθηκεύτηκε: ${new Date(data.savedAt).toLocaleDateString('el-GR')}</small>
             </div>
             <button class="delete-template" onclick="deleteTemplate('${name}', event)">
                 <i class="fas fa-trash"></i>
@@ -453,7 +607,6 @@ function loadTemplateData(templateName) {
     const template = savedTemplates[templateName];
     if (!template) return;
     
-    // Φόρτωση δεδομένων στη φόρμα
     Object.entries(template).forEach(([key, value]) => {
         const element = document.getElementById(key);
         if (element && key !== 'savedAt') {
@@ -461,8 +614,9 @@ function loadTemplateData(templateName) {
         }
     });
     
-    // Ενημέρωση sliders
     updateAllSliderValues();
+    updateLaborSummary();
+    updateTransportSummary();
     
     closeModal('loadModal');
     showNotification('Το πρότυπο φορτώθηκε επιτυχώς!', 'success');
@@ -479,59 +633,146 @@ function deleteTemplate(templateName, event) {
     }
 }
 
-// Εξαγωγή PDF
+// Εξαγωγή PDF με υποστήριξη ελληνικών
 function exportPDF() {
     if (!currentCalculation) {
-        alert('Παρακαλώ κάντε πρώτα έναν υπολογισμό');
+        showNotification('Παρακαλώ κάντε πρώτα έναν υπολογισμό', 'warning');
         return;
     }
     
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    // Δημιουργία HTML για εκτύπωση
+    const printContent = generatePrintContent();
     
-    // Ρυθμίσεις PDF
-    doc.setFont('helvetica');
+    // Δημιουργία νέου παραθύρου για εκτύπωση
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="el">
+        <head>
+            <meta charset="UTF-8">
+            <title>Αναφορά Κοστολόγησης - ${currentCalculation.data.productName}</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    margin: 20px; 
+                    color: #333;
+                    line-height: 1.6;
+                }
+                .header { 
+                    text-align: center; 
+                    border-bottom: 2px solid #2563eb; 
+                    padding-bottom: 20px; 
+                    margin-bottom: 30px;
+                }
+                .section { 
+                    margin-bottom: 25px; 
+                    page-break-inside: avoid;
+                }
+                .section h3 { 
+                    color: #2563eb; 
+                    border-bottom: 1px solid #e2e8f0; 
+                    padding-bottom: 5px;
+                }
+                .grid { 
+                    display: grid; 
+                    grid-template-columns: repeat(2, 1fr); 
+                    gap: 15px; 
+                    margin: 15px 0;
+                }
+                .item { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    padding: 8px; 
+                    background: #f8fafc; 
+                    border-radius: 4px;
+                }
+                .highlight { 
+                    background: #dbeafe; 
+                    font-weight: bold;
+                }
+                .footer { 
+                    margin-top: 40px; 
+                    text-align: center; 
+                    font-size: 12px; 
+                    color: #666;
+                }
+                @media print {
+                    body { margin: 0; }
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            ${printContent}
+        </body>
+        </html>
+    `);
     
-    // Τίτλος
-    doc.setFontSize(20);
-    doc.text('Αναφορά Κοστολόγησης', 20, 30);
+    printWindow.document.close();
     
-    // Στοιχεία προϊόντος
-    doc.setFontSize(14);
-    doc.text('Στοιχεία Προϊόντος:', 20, 50);
-    doc.setFontSize(12);
-    doc.text(`Προϊόν: ${currentCalculation.data.productName}`, 20, 60);
-    doc.text(`Ποσότητα: ${currentCalculation.data.quantity} κιλά`, 20, 70);
-    doc.text(`Τιμή Αγοράς: ${currentCalculation.data.purchasePrice.toFixed(2)}€/κιλό`, 20, 80);
+    // Αναμονή φόρτωσης και εκτύπωση
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 500);
     
-    // Αποτελέσματα
-    doc.setFontSize(14);
-    doc.text('Αποτελέσματα:', 20, 100);
-    doc.setFontSize(12);
-    doc.text(`Συνολικό Κόστος: ${currentCalculation.results.totalCostPerKg.toFixed(2)}€/κιλό`, 20, 110);
-    doc.text(`Τελική Τιμή: ${currentCalculation.results.finalPricePerKg.toFixed(2)}€/κιλό`, 20, 120);
-    doc.text(`Κέρδος: ${currentCalculation.results.profitPerKg.toFixed(2)}€/κιλό`, 20, 130);
-    doc.text(`Περιθώριο: ${currentCalculation.results.profitMarginActual.toFixed(1)}%`, 20, 140);
+    showNotification('Η αναφορά PDF ετοιμάζεται για εκτύπωση!', 'success');
+}
+
+function generatePrintContent() {
+    const { data, results } = currentCalculation;
+    const now = new Date();
     
-    // Ανάλυση κόστους
-    doc.setFontSize(14);
-    doc.text('Ανάλυση Κόστους:', 20, 160);
-    doc.setFontSize(12);
-    let yPos = 170;
-    Object.entries(currentCalculation.results.breakdown).forEach(([key, value]) => {
-        doc.text(`${key}: ${value.toFixed(2)}€`, 20, yPos);
-        yPos += 10;
-    });
-    
-    // Ημερομηνία
-    doc.setFontSize(10);
-    doc.text(`Δημιουργήθηκε: ${new Date().toLocaleDateString('el-GR')} ${new Date().toLocaleTimeString('el-GR')}`, 20, 280);
-    
-    // Αποθήκευση
-    const filename = `kostologisi_${currentCalculation.data.productName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(filename);
-    
-    showNotification('Η αναφορά PDF εξήχθη επιτυχώς!', 'success');
+    return `
+        <div class="header">
+            <h1>Αναφορά Κοστολόγησης</h1>
+            <p>Προϊόν: ${data.productName} | Ημερομηνία: ${now.toLocaleDateString('el-GR')} ${now.toLocaleTimeString('el-GR')}</p>
+        </div>
+        
+        <div class="section">
+            <h3>Βασικά Στοιχεία</h3>
+            <div class="grid">
+                <div class="item"><span>Προϊόν:</span><span>${data.productName}</span></div>
+                <div class="item"><span>Ποσότητα:</span><span>${data.quantity} κιλά</span></div>
+                <div class="item"><span>Τιμή Αγοράς:</span><span>${data.purchasePrice.toFixed(2)}€/κιλό</span></div>
+                <div class="item"><span>Φύρα:</span><span>${data.waste}%</span></div>
+                ${data.icePercent > 0 ? `<div class="item"><span>Πάγος:</span><span>${data.icePercent}%</span></div>` : ''}
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>Κόστη</h3>
+            <div class="grid">
+                <div class="item"><span>Εργαζόμενοι:</span><span>${data.workerCount} άτομα</span></div>
+                <div class="item"><span>Ώρες/άτομο:</span><span>${data.laborHours} ώρες</span></div>
+                <div class="item"><span>Κόστος/ώρα:</span><span>${data.laborCost.toFixed(2)}€</span></div>
+                <div class="item"><span>Συνολικές ώρες:</span><span>${results.totalLaborHours.toFixed(1)} ώρες</span></div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>Αποτελέσματα</h3>
+            <div class="grid">
+                <div class="item highlight"><span>Συνολικό Κόστος:</span><span>${results.totalCostPerKg.toFixed(2)}€/κιλό</span></div>
+                <div class="item highlight"><span>Τελική Τιμή:</span><span>${results.finalPricePerKg.toFixed(2)}€/κιλό</span></div>
+                <div class="item highlight"><span>Κέρδος:</span><span>${results.profitPerKg.toFixed(2)}€/κιλό</span></div>
+                <div class="item highlight"><span>Περιθώριο:</span><span>${results.profitMarginActual.toFixed(1)}%</span></div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>Ανάλυση Κόστους</h3>
+            <div class="grid">
+                ${Object.entries(results.breakdown).map(([key, value]) => 
+                    `<div class="item"><span>${key}:</span><span>${value.toFixed(2)}€</span></div>`
+                ).join('')}
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Υπολογιστής Κοστολόγησης Pro - Αναφορά δημιουργήθηκε στις ${now.toLocaleString('el-GR')}</p>
+        </div>
+    `;
 }
 
 // Επαναφορά φόρμας
@@ -545,11 +786,14 @@ function resetForm() {
             slider.value = slider.min;
         });
         
-        // Ειδική περίπτωση για quantity και profit
+        // Ειδικές περιπτώσεις
         document.getElementById('quantity').value = '1';
+        document.getElementById('workerCount').value = '1';
         document.getElementById('profitSlider').value = '20';
         
         updateAllSliderValues();
+        updateLaborSummary();
+        updateTransportSummary();
         
         // Απόκρυψη αποτελεσμάτων
         document.getElementById('result').classList.remove('show');
@@ -577,25 +821,42 @@ function closeModal(modalId) {
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
+    
+    const icons = {
+        success: 'fa-check-circle',
+        warning: 'fa-exclamation-triangle',
+        error: 'fa-times-circle',
+        info: 'fa-info-circle'
+    };
+    
+    const colors = {
+        success: '#059669',
+        warning: '#d97706',
+        error: '#dc2626',
+        info: '#2563eb'
+    };
+    
     notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-        ${message}
+        <i class="fas ${icons[type]}"></i>
+        <span>${message}</span>
     `;
     
-    // Στυλ notification
     notification.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
-        background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+        background: ${colors[type]};
         color: white;
-        padding: 15px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
         z-index: 10000;
         animation: slideInRight 0.3s ease;
-        max-width: 300px;
-        font-weight: 600;
+        max-width: 350px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     `;
     
     document.body.appendChild(notification);
@@ -603,15 +864,17 @@ function showNotification(message, type = 'info') {
     setTimeout(() => {
         notification.style.animation = 'slideOutRight 0.3s ease';
         setTimeout(() => {
-            document.body.removeChild(notification);
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
         }, 300);
-    }, 3000);
+    }, 4000);
 }
 
 function loadDefaultValues() {
-    // Φόρτωση προεπιλεγμένων τιμών
     const defaults = {
         quantity: 1,
+        workerCount: 1,
         laborCost: 12,
         fuelCost: 0.15,
         profitMargin: 20
@@ -646,76 +909,6 @@ style.textContent = `
     @keyframes slideOutRight {
         from { transform: translateX(0); opacity: 1; }
         to { transform: translateX(100%); opacity: 0; }
-    }
-    
-    .breakdown-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 15px;
-        margin-top: 15px;
-    }
-    
-    .breakdown-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px;
-        background: #f8f9fa;
-        border-radius: 6px;
-        border-left: 3px solid #667eea;
-    }
-    
-    .breakdown-label {
-        font-weight: 600;
-        color: #555;
-    }
-    
-    .breakdown-value {
-        font-weight: 700;
-        color: #2c3e50;
-    }
-    
-    .recommendations {
-        margin-top: 25px;
-    }
-    
-    .recommendation {
-        padding: 15px;
-        margin: 10px 0;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 600;
-    }
-    
-    .recommendation.success {
-        background: #d4edda;
-        color: #155724;
-        border-left: 4px solid #28a745;
-    }
-    
-    .recommendation.warning {
-        background: #fff3cd;
-        color: #856404;
-        border-left: 4px solid #ffc107;
-    }
-    
-    .recommendation.info {
-        background: #d1ecf1;
-        color: #0c5460;
-        border-left: 4px solid #17a2b8;
-    }
-    
-    .competitor-price {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #2c3e50;
-        margin: 10px 0;
-    }
-    
-    .competitor-diff {
-        font-weight: 600;
-        font-size: 14px;
     }
 `;
 document.head.appendChild(style);
