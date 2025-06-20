@@ -1,62 +1,241 @@
-
 <!DOCTYPE html>
 <html lang="el">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Υπολογιστής Κοστολόγησης</title>
+  <title>Υπολογιστής Κοστολόγησης Pro</title>
   <link rel="stylesheet" href="style.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
+  <div class="header">
+    <h1><i class="fas fa-calculator"></i> Υπολογιστής Κοστολόγησης Pro</h1>
+    <div class="header-actions">
+      <button class="btn-secondary" onclick="saveTemplate()">
+        <i class="fas fa-save"></i> Αποθήκευση Προτύπου
+      </button>
+      <button class="btn-secondary" onclick="loadTemplate()">
+        <i class="fas fa-folder-open"></i> Φόρτωση Προτύπου
+      </button>
+      <button class="btn-secondary" onclick="exportPDF()">
+        <i class="fas fa-file-pdf"></i> Εξαγωγή PDF
+      </button>
+    </div>
+  </div>
+
   <div class="container">
-    <h1>💼 Υπολογιστής Κοστολόγησης Προϊόντος</h1>
-
-    <div class="section">
-      <label>🧾 Όνομα Προϊόντος:</label>
-      <input type="text" id="productName" placeholder="π.χ. Σουπιά" />
-      <label>💶 Τιμή Αγοράς (€ / κιλό):</label>
-      <input type="number" id="purchasePrice" />
+    <div class="tabs">
+      <button class="tab-button active" onclick="showTab('basic')">
+        <i class="fas fa-box"></i> Βασικά Στοιχεία
+      </button>
+      <button class="tab-button" onclick="showTab('costs')">
+        <i class="fas fa-coins"></i> Κόστη
+      </button>
+      <button class="tab-button" onclick="showTab('transport')">
+        <i class="fas fa-truck"></i> Μεταφορά
+      </button>
+      <button class="tab-button" onclick="showTab('analysis')">
+        <i class="fas fa-chart-line"></i> Ανάλυση
+      </button>
     </div>
 
-    <div class="section">
-      <label>❌ Φύρα (%):</label>
-      <input type="number" id="waste" />
-      <label>👷 Εργατοώρες:</label>
-      <input type="number" id="laborHours" />
-      <label>💵 Κόστος ανά Εργατοώρα (€):</label>
-      <input type="number" id="laborCost" />
+    <!-- Βασικά Στοιχεία -->
+    <div id="basic" class="tab-content active">
+      <div class="card">
+        <h3><i class="fas fa-tag"></i> Στοιχεία Προϊόντος</h3>
+        <div class="form-group">
+          <label><i class="fas fa-fish"></i> Όνομα Προϊόντος:</label>
+          <input type="text" id="productName" placeholder="π.χ. Σουπιά" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fas fa-euro-sign"></i> Τιμή Αγοράς (€/κιλό):</label>
+            <input type="number" id="purchasePrice" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-weight"></i> Ποσότητα (κιλά):</label>
+            <input type="number" id="quantity" value="1" step="0.1" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-trash"></i> Φύρα (%):</label>
+          <input type="range" id="wasteSlider" min="0" max="50" value="0" oninput="updateSliderValue('waste', this.value)" />
+          <span class="slider-value" id="wasteValue">0%</span>
+          <input type="number" id="waste" style="display:none" />
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-      <label>📦 Κόστος Κούτας (€):</label>
-      <input type="number" id="boxCost" />
-      <label>🛍️ Κόστος Σακούλας (€):</label>
-      <input type="number" id="bagCost" />
+    <!-- Κόστη -->
+    <div id="costs" class="tab-content">
+      <div class="card">
+        <h3><i class="fas fa-users"></i> Εργασία</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fas fa-clock"></i> Εργατοώρες:</label>
+            <input type="number" id="laborHours" step="0.1" />
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-money-bill"></i> Κόστος/Ώρα (€):</label>
+            <input type="number" id="laborCost" step="0.01" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><i class="fas fa-box-open"></i> Συσκευασία</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fas fa-archive"></i> Κόστος Κούτας (€):</label>
+            <input type="number" id="boxCost" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-shopping-bag"></i> Κόστος Σακούλας (€):</label>
+            <input type="number" id="bagCost" step="0.01" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-snowflake"></i> Ποσοστό Πάγου (%):</label>
+          <input type="range" id="iceSlider" min="0" max="30" value="0" oninput="updateSliderValue('ice', this.value)" />
+          <span class="slider-value" id="iceValue">0%</span>
+          <input type="number" id="icePercent" style="display:none" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><i class="fas fa-plus-circle"></i> Επιπλέον Κόστη</h3>
+        <div class="form-group">
+          <label><i class="fas fa-bolt"></i> Ηλεκτρικό Ρεύμα (€):</label>
+          <input type="number" id="electricityCost" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-tools"></i> Εξοπλισμός/Συντήρηση (€):</label>
+          <input type="number" id="equipmentCost" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-shield-alt"></i> Ασφάλιστρα (€):</label>
+          <input type="number" id="insuranceCost" step="0.01" />
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-      <label>🚛 Απόσταση Μεταφοράς (km):</label>
-      <input type="number" id="distance" />
-      <label>⛽ Κόστος Βενζίνης (€/km):</label>
-      <input type="number" id="fuelCost" />
-      <label>🛣️ Κόστος Διοδίων (€):</label>
-      <input type="number" id="tolls" />
+    <!-- Μεταφορά -->
+    <div id="transport" class="tab-content">
+      <div class="card">
+        <h3><i class="fas fa-route"></i> Στοιχεία Μεταφοράς</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fas fa-road"></i> Απόσταση (km):</label>
+            <input type="number" id="distance" step="0.1" />
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-gas-pump"></i> Κόστος Καυσίμου (€/km):</label>
+            <input type="number" id="fuelCost" step="0.01" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-coins"></i> Κόστος Διοδίων (€):</label>
+          <input type="number" id="tolls" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-parking"></i> Κόστος Στάθμευσης (€):</label>
+          <input type="number" id="parkingCost" step="0.01" />
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-      <label>❄️ Ποσοστό Πάγου (%):</label>
-      <input type="number" id="icePercent" />
-      <label>📈 Επιθυμητό Περιθώριο Κέρδους (%):</label>
-      <input type="number" id="profitMargin" />
+    <!-- Ανάλυση -->
+    <div id="analysis" class="tab-content">
+      <div class="card">
+        <h3><i class="fas fa-percentage"></i> Περιθώριο Κέρδους</h3>
+        <div class="form-group">
+          <label><i class="fas fa-chart-line"></i> Επιθυμητό Περιθώριο (%):</label>
+          <input type="range" id="profitSlider" min="0" max="100" value="20" oninput="updateSliderValue('profit', this.value)" />
+          <span class="slider-value" id="profitValue">20%</span>
+          <input type="number" id="profitMargin" style="display:none" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><i class="fas fa-calculator"></i> Σενάρια Τιμολόγησης</h3>
+        <div class="scenario-buttons">
+          <button class="btn-scenario" onclick="setScenario('conservative')">
+            <i class="fas fa-shield-alt"></i> Συντηρητικό (15%)
+          </button>
+          <button class="btn-scenario" onclick="setScenario('balanced')">
+            <i class="fas fa-balance-scale"></i> Ισορροπημένο (25%)
+          </button>
+          <button class="btn-scenario" onclick="setScenario('aggressive')">
+            <i class="fas fa-rocket"></i> Επιθετικό (40%)
+          </button>
+        </div>
+      </div>
     </div>
 
-    <button onclick="calculate()">Υπολογισμός</button>
+    <div class="calculate-section">
+      <button class="btn-calculate" onclick="calculate()">
+        <i class="fas fa-calculator"></i> Υπολογισμός Κοστολόγησης
+      </button>
+      <button class="btn-secondary" onclick="resetForm()">
+        <i class="fas fa-undo"></i> Επαναφορά
+      </button>
+    </div>
 
-    <div id="result" class="section"></div>
-    <canvas id="chart" height="100"></canvas>
+    <div id="result" class="result-section"></div>
+    
+    <div class="charts-section">
+      <div class="chart-container">
+        <canvas id="profitChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="costBreakdownChart"></canvas>
+      </div>
+    </div>
+
+    <div class="comparison-section">
+      <h3><i class="fas fa-balance-scale"></i> Σύγκριση με Ανταγωνισμό</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Τιμή Ανταγωνιστή 1 (€):</label>
+          <input type="number" id="competitor1" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Τιμή Ανταγωνιστή 2 (€):</label>
+          <input type="number" id="competitor2" step="0.01" />
+        </div>
+      </div>
+      <div id="competitorAnalysis"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p><i class="fas fa-info-circle"></i> Υπολογιστής Κοστολόγησης Pro - Όλα τα δικαιώματα διατηρούνται</p>
+  </div>
+
+  <!-- Modal για αποθήκευση προτύπου -->
+  <div id="saveModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('saveModal')">&times;</span>
+      <h3><i class="fas fa-save"></i> Αποθήκευση Προτύπου</h3>
+      <div class="form-group">
+        <label>Όνομα Προτύπου:</label>
+        <input type="text" id="templateName" placeholder="π.χ. Θαλασσινά Βασικό" />
+      </div>
+      <button class="btn-primary" onclick="saveTemplateData()">Αποθήκευση</button>
+    </div>
+  </div>
+
+  <!-- Modal για φόρτωση προτύπου -->
+  <div id="loadModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('loadModal')">&times;</span>
+      <h3><i class="fas fa-folder-open"></i> Φόρτωση Προτύπου</h3>
+      <div id="templateList"></div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
